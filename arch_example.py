@@ -348,6 +348,7 @@ def plot_arch_results(
     fig.tight_layout()
     if output_path is not None:
         fig.savefig(output_path, bbox_inches="tight")
+        fig.savefig(str(output_path).replace(".pdf", ".png"), bbox_inches="tight")
         plt.close(fig)
 
 

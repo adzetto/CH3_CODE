@@ -721,6 +721,7 @@ def plot_results(
     plt.tight_layout()
     if output_path is not None:
         plt.savefig(output_path, bbox_inches="tight")
+        plt.savefig(str(output_path).replace(".pdf", ".png"), bbox_inches="tight")
         plt.close()
 
 
@@ -923,15 +924,15 @@ if __name__ == "__main__":
     output_dir = Path(__file__).resolve().parent
     run_and_plot(
         clamped=False,
-        input_elastic=FLAGSHYP_TRUSS_ELASTIC,
-        input_plastic=FLAGSHYP_TRUSS_PLASTIC,
-        use_control=True,
+        input_elastic=None,
+        input_plastic=None,
+        use_control=False,
         output_path=output_dir / "figure_3_9_trussed_frame.pdf",
     )
     run_and_plot(
         clamped=True,
-        input_elastic=FLAGSHYP_TRUSS_ELASTIC,
-        input_plastic=FLAGSHYP_TRUSS_PLASTIC,
-        use_control=True,
+        input_elastic=None,
+        input_plastic=None,
+        use_control=False,
         output_path=output_dir / "figure_3_9_trussed_frame_clamped.pdf",
     )

@@ -6,56 +6,91 @@ This repository contains a Python implementation for the non-linear analysis of 
 
 The main objective is to determine the equilibrium path of truss structures under external loading. The code handles:
 *   **Geometric Non-linearity**: Using a logarithmic strain measure to account for finite strains and large rotations.
-*   **Material Non-linearity**: implementing an elastoplastic material model with isotropic hardening.
+*   **Material Non-linearity**: Implementing an elastoplastic material model with isotropic hardening.
 *   **Instability**: Capturing snap-through and snap-back phenomena using path-following techniques.
 
-## Algorithms Used
+## Mathematical Formulation
 
-The solution strategy involves several advanced numerical methods:
+The following algorithms are implemented to solve the non-linear system.
 
-### 1. Global Solution Scheme: Newton-Raphson with Arc-Length Control
-To trace the non-linear equilibrium path, including limit points, the code employs a **Cylindrical Arc-Length Method** combined with the Newton-Raphson iterative scheme.
-*   **Predictor Step**: Estimates the next equilibrium point along the tangent of the path.
-*   **Corrector Step**: Iteratively corrects the solution to satisfy equilibrium within a specified tolerance while constraining the step length.
+### 1. Global Newton-Raphson Solver with Arc-Length Control
+
+The equilibrium path is traced using a predictor-corrector scheme. 
+*   **Residual Force**: Given the external force $\mathbf{T}_{ext}$ and internal forces $\mathbf{T}_{int}$, the residual is $\mathbf{R} = \mathbf{T}_{ext} - \mathbf{T}_{int}$.
+*   **Linearization**: The system $\mathbf{K} \delta \mathbf{u} = \mathbf{R}$ is solved for the displacement increment $\delta \mathbf{u}$, where $\mathbf{K}$ is the global tangent stiffness matrix.
 
 ### 2. Kinematics: Logarithmic Strain
-The deformation is described using the logarithmic strain measure:
-$$
-\varepsilon = \ln\left(\frac{l}{L}\right)
-$$
-where $l$ is the current length and $L$ is the initial length of the truss element. This measure is conjugate to the Kirchhoff stress.
 
-### 3. Constitutive Update: Return Mapping Algorithm
-For elastoplasticity, the stress is updated using an **Elastic Predictor - Plastic Corrector** scheme (Return Mapping):
-1.  **Elastic Predictor**: Assume the step is purely elastic and calculate a trial stress.
-2.  **Yield Check**: Check if the trial stress exceeds the yield surface defined by $\Phi = |\tau| - (\sigma_{y0} + H\alpha) \le 0$.
-3.  **Plastic Corrector**: If yielding occurs, return the stress to the yield surface and update the internal hardening variables (plastic strain $\varepsilon^p$ and accumulated plastic strain $\alpha$).
+For a truss element with initial length $ and current length $, the logarithmic strain is defined as:
+97871
+\varepsilon = \ln\left(\frac{l}{L}\right)
+97871
+This measure is energetically conjugate to the Kirchhoff stress $\tau$.
+
+### 3. Material Point Algorithm (Return Mapping)
+
+The elastoplastic constitutive behavior is handled via a return mapping algorithm at the element level.
+
+#### Elastic Predictor
+Assume the step is purely elastic:
+97871
+\tau^{trial} = E (\varepsilon_{n+1} - \varepsilon_{p,n}) \
+\Phi^{trial} = |\tau^{trial}| - (\sigma_{y0} + H \alpha_n)
+97871
+
+#### Plastic Corrector
+If $\Phi^{trial} > 0$ (yielding), the stress and history variables are corrected:
+1.  **Plastic Multiplier**: $\Delta \gamma = \frac{\Phi^{trial}}{E + H}$
+2.  **Stress Update**: $\tau_{n+1} = \tau^{trial} - E \Delta \gamma \, \text{sign}(\tau^{trial})$
+3.  **Plastic Strain**: $\varepsilon_{p,n+1} = \varepsilon_{p,n} + \Delta \gamma \, \text{sign}(\tau^{trial})$
+4.  **Accumulated Plastic Strain**: $\alpha_{n+1} = \alpha_n + \Delta \gamma$
+5.  **Consistent Tangent**: {alg} = \frac{EH}{E + H}$
+
+### 4. Element Formulation
+
+The implementation derives the internal force and stiffness matrix exactly.
+
+*   **Internal Force Vector**:
+    97871
+    \mathbf{f}_{int} = \frac{V \tau}{l} \begin{bmatrix} -\mathbf{n} \ \mathbf{n} \end{bmatrix}
+    97871
+    where $ is volume, $\tau$ is Kirchhoff stress, $ is current length, and $\mathbf{n}$ is the current unit vector.
+
+*   **Tangent Stiffness Matrix**:
+    The stiffness matrix $\mathbf{K}$ consists of material and geometric contributions:
+    97871
+    \mathbf{K} = (\mathbf{k}_{mat} + \mathbf{k}_{geo}) \begin{bmatrix} 1 & -1 \ -1 & 1 \end{bmatrix}
+    97871
+    where:
+    97871
+    \mathbf{k}_{mat} = \frac{V E_{alg}}{l^2} (\mathbf{n} \otimes \mathbf{n})
+    97871
+    97871
+    \mathbf{k}_{geo} = \frac{V \tau}{l^2} (\mathbf{I} - \mathbf{n} \otimes \mathbf{n})
+    97871
 
 ## Examples
 
-The repository includes several benchmark examples demonstrating the capabilities of the solver:
+The repository includes several benchmark examples.
 
 ### 1. Shallow Dome (`dome_example.py`)
 A 3D shallow truss dome subjected to a central point load. This problem exhibits complex snapping behavior (snap-through).
-*   **Output**: `figure_3_11_shallow_dome.pdf`
+
+![Shallow Dome Results](figure_3_11_shallow_dome.png)
 
 ### 2. 2D Arch (`arch_example.py`)
 A deep circular arch modeled with truss elements. It typically demonstrates limit points and unstable branches in the load-displacement curve.
-*   **Output**: `figure_3_10_arch.pdf`
+
+![Arch Results](figure_3_10_arch.png)
 
 ### 3. Lee's Frame (`lee_frame.py`)
 A classic benchmark problem involving a frame structure. This implementation models the frame using a "trussed" equivalent (two chords with cross-bracing) to simulate bending behavior using only truss elements.
-*   **Outputs**:
-    *   `figure_3_9_trussed_frame.pdf`
-    *   `figure_3_9_trussed_frame_clamped.pdf`
 
-## File Structure
+#### Unclamped Boundary Calculation
+![Lee Frame Unclamped](figure_3_9_trussed_frame.png)
 
-*   `truss_analysis.py`: Core library containing `TrussElement` and `TrussAnalysis` classes.
-*   `truss_algorithm.tex`: LaTeX documentation describing the mathematical formulation.
-*   `truss_examples.ipynb`: Jupyter Notebook for interactive exploration of the examples.
-*   `*.py` (examples): Python scripts for running specific simulations.
-*   `*.pdf`: Generated plots of load-displacement curves and deformed shapes.
+#### Clamped Boundary Calculation
+![Lee Frame Clamped](figure_3_9_trussed_frame_clamped.png)
 
 ## Usage
 
@@ -65,4 +100,7 @@ To run an example, simply execute the corresponding Python script:
 python arch_example.py
 ```
 
-Ensure you have the required dependencies installed (e.g., `numpy`, `matplotlib`).
+Ensure you have the required dependencies installed:
+```bash
+pip install numpy matplotlib
+```
