@@ -133,16 +133,24 @@ def generate_trussed_frame(
     else:
         raise ValueError("support_mode must be 'book' or 'edge'")
 
-    for node_idx in bottom_nodes:
-        analysis.add_constraint(node_idx, 0, 0.0)
-        analysis.add_constraint(node_idx, 1, 0.0)
-
     if clamped:
+        for node_idx in bottom_nodes:
+            analysis.add_constraint(node_idx, 0, 0.0)
+            analysis.add_constraint(node_idx, 1, 0.0)
         for node_idx in right_nodes:
             analysis.add_constraint(node_idx, 0, 0.0)
             analysis.add_constraint(node_idx, 1, 0.0)
     else:
-        if right_support == "x":
+        # Pinned at bottom left (always)
+        for node_idx in bottom_nodes:
+            analysis.add_constraint(node_idx, 0, 0.0)
+            analysis.add_constraint(node_idx, 1, 0.0)
+
+        if right_support == "pinned":
+            for node_idx in right_nodes:
+                analysis.add_constraint(node_idx, 0, 0.0)
+                analysis.add_constraint(node_idx, 1, 0.0)
+        elif right_support == "x":
             for node_idx in right_nodes:
                 analysis.add_constraint(node_idx, 0, 0.0)
         elif right_support == "y":
@@ -922,15 +930,20 @@ def run_and_plot(
 
 if __name__ == "__main__":
     output_dir = Path(__file__).resolve().parent
+    # Unclamped = Pinned-Pinned (Hinged)
     run_and_plot(
         clamped=False,
+        right_support="pinned",
+        support_mode="book",
         input_elastic=None,
         input_plastic=None,
         use_control=False,
         output_path=output_dir / "figure_3_9_trussed_frame.pdf",
     )
+    # Clamped = Fixed-Fixed (Rotational)
     run_and_plot(
         clamped=True,
+        support_mode="edge",
         input_elastic=None,
         input_plastic=None,
         use_control=False,
